@@ -1,0 +1,2411 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="GandoGym" />
+<meta name="theme-color" content="#111111" />
+<title>GANDO GYM</title>
+
+<!-- Inline SVG icon as data URI for Apple touch icon + favicon -->
+<link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23111'/><text x='50' y='62' font-family='Impact,sans-serif' font-size='38' text-anchor='middle' fill='%23fff'>GG</text><circle cx='82' cy='22' r='8' fill='%23CC1500'/></svg>" />
+<link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23111'/><text x='50' y='62' font-family='Impact,sans-serif' font-size='38' text-anchor='middle' fill='%23fff'>GG</text><circle cx='82' cy='22' r='8' fill='%23CC1500'/></svg>" />
+
+<!-- Dexie.js from CDN -->
+<script src="https://unpkg.com/dexie@3.2.4/dist/dexie.min.js"></script>
+
+<style>
+:root{
+  --bg:#111111;
+  --card:#1c1c1c;
+  --card2:#242424;
+  --inp:#161616;
+  --brd:#2a2a2a;
+  --brd2:#353535;
+  --acc:#CC1500;
+  --acc-dk:#991000;
+  --text:#ffffff;
+  --t2:#bbbbbb;
+  --t3:#888888;
+  --t4:#666666;
+  --grn:#4CAF50;
+  --grn-bg:#0c2416;
+  --red-bg:#250f0f;
+  --red-brd:#5a1a1a;
+  --red-t:#ff6b6b;
+  --radius:14px;
+  --radius-sm:8px;
+  --tab-h:60px;
+  --header-h:64px;
+}
+
+*,*::before,*::after{
+  box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
+  margin:0;
+  padding:0;
+}
+
+html{
+  height:100%;
+  font-size:16px;
+  -webkit-text-size-adjust:100%;
+}
+
+body{
+  min-height:100%;
+  background:var(--bg);
+  color:var(--text);
+  font-family:-apple-system,'SF Pro Text','Helvetica Neue',sans-serif;
+  overscroll-behavior:none;
+  -webkit-overflow-scrolling:touch;
+  padding-bottom:calc(var(--tab-h) + env(safe-area-inset-bottom));
+  padding-top:env(safe-area-inset-top);
+}
+
+button{
+  font-family:inherit;
+  color:inherit;
+  background:none;
+  border:none;
+  cursor:pointer;
+}
+
+input,select,textarea{
+  font-family:inherit;
+  color:inherit;
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+
+#app-header{
+  position:sticky;
+  top:0;
+  z-index:20;
+  background:var(--bg);
+  border-bottom:1px solid var(--brd);
+  padding:12px 16px 10px;
+}
+
+.header-top{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+}
+
+.brand{
+  font-family:Impact,'Arial Narrow',sans-serif;
+  font-size:26px;
+  letter-spacing:1px;
+  color:var(--text);
+}
+.brand .gym{color:var(--acc)}
+
+#session-timer{
+  font-family:'SF Mono',Menlo,monospace;
+  font-size:14px;
+  color:var(--acc);
+  font-weight:600;
+}
+
+.header-sub{
+  font-size:11px;
+  color:var(--t3);
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  margin-top:2px;
+}
+
+/* ── Screens ────────────────────────────────────────────────────────────── */
+
+#screens{
+  padding:16px;
+  max-width:640px;
+  margin:0 auto;
+}
+
+.screen{min-height:200px}
+.screen[hidden]{display:none}
+
+.loading{
+  padding:48px 0;
+  text-align:center;
+  color:var(--t3);
+  font-size:14px;
+}
+
+.empty-state{
+  padding:32px 16px;
+  text-align:center;
+  color:var(--t3);
+  font-size:14px;
+  line-height:1.5;
+}
+
+/* ── Start screen ───────────────────────────────────────────────────────── */
+
+.start-actions{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  margin-bottom:24px;
+}
+
+.btn-primary{
+  background:var(--acc);
+  color:#fff;
+  font-size:18px;
+  font-weight:700;
+  padding:18px;
+  border-radius:var(--radius);
+  width:100%;
+  transition:background .15s;
+}
+.btn-primary:active{background:var(--acc-dk)}
+
+.btn-secondary{
+  background:var(--card2);
+  color:#fff;
+  font-size:17px;
+  font-weight:500;
+  padding:18px;
+  border-radius:var(--radius);
+  width:100%;
+  border:1px solid var(--brd);
+}
+.btn-secondary:active{background:var(--card)}
+
+.btn-tertiary{
+  background:transparent;
+  color:var(--t2);
+  font-size:14px;
+  padding:12px 16px;
+  border:1px solid var(--brd);
+  border-radius:var(--radius-sm);
+}
+
+.btn-danger{
+  background:var(--red-bg);
+  color:var(--red-t);
+  font-size:17px;
+  font-weight:600;
+  padding:16px;
+  border-radius:var(--radius);
+  border:1px solid var(--red-brd);
+  width:100%;
+}
+
+.btn-small{
+  font-size:12px;
+  padding:6px 10px;
+  border-radius:6px;
+  background:var(--card2);
+  color:var(--t2);
+  border:1px solid var(--brd);
+}
+.btn-small.danger{color:var(--red-t);border-color:var(--red-brd);background:var(--red-bg)}
+
+.last-session-card{
+  background:var(--card);
+  border:1px solid var(--brd);
+  border-radius:var(--radius);
+  padding:14px 16px;
+}
+.last-session-card .lbl{
+  font-size:10px;
+  color:var(--t4);
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  margin-bottom:6px;
+}
+.last-session-card .name{
+  font-size:16px;
+  font-weight:600;
+  color:var(--text);
+  margin-bottom:4px;
+}
+.last-session-card .meta{
+  font-size:12px;
+  color:var(--t3);
+}
+
+/* ── Template picker ────────────────────────────────────────────────────── */
+
+.section-title{
+  font-size:11px;
+  color:var(--t3);
+  letter-spacing:1.5px;
+  text-transform:uppercase;
+  margin-bottom:10px;
+  margin-top:4px;
+}
+
+.template-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+
+.template-item{
+  background:var(--card);
+  border:1px solid var(--brd);
+  border-radius:var(--radius);
+  padding:14px 16px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+}
+.template-item.selected{
+  border-color:var(--acc);
+  background:var(--card2);
+}
+.template-item .info{flex:1;min-width:0}
+.template-item .name{font-size:16px;font-weight:600;margin-bottom:2px}
+.template-item .meta{font-size:12px;color:var(--t3)}
+.template-item .actions{display:flex;gap:6px}
+
+.back-row{
+  display:flex;
+  gap:8px;
+  margin-bottom:16px;
+}
+
+.go-button-row{
+  position:sticky;
+  bottom:calc(var(--tab-h) + env(safe-area-inset-bottom) + 12px);
+  padding:0;
+  z-index:15;
+}
+
+/* ── Session active ─────────────────────────────────────────────────────── */
+
+.exercise-card{
+  background:var(--card);
+  border:1px solid var(--brd);
+  border-radius:var(--radius);
+  padding:14px;
+  margin-bottom:12px;
+}
+.exercise-card.superset{
+  border-color:var(--acc-dk);
+}
+
+.ex-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:8px;
+  margin-bottom:12px;
+}
+.ex-name{
+  font-size:17px;
+  font-weight:700;
+  color:var(--text);
+  word-break:break-word;
+  flex:1;
+  min-width:0;
+}
+.ex-badge{
+  display:inline-block;
+  background:var(--acc);
+  color:#fff;
+  font-size:10px;
+  padding:2px 6px;
+  border-radius:4px;
+  margin-left:6px;
+  font-weight:700;
+  letter-spacing:1px;
+  vertical-align:middle;
+}
+.ex-controls{
+  display:flex;
+  gap:4px;
+  flex-shrink:0;
+}
+.ex-ctrl-btn{
+  font-size:11px;
+  padding:5px 8px;
+  border-radius:6px;
+  background:var(--card2);
+  color:var(--t2);
+  border:1px solid var(--brd);
+  white-space:nowrap;
+}
+
+.ex-meta{
+  font-size:11px;
+  color:var(--t3);
+  margin-bottom:10px;
+}
+
+/* Set row */
+
+.set-row{
+  display:grid;
+  grid-template-columns:28px 54px 1fr 14px 1fr 40px;
+  gap:6px;
+  align-items:center;
+  padding:6px 0;
+  border-top:1px solid var(--brd);
+}
+.set-row:first-of-type{border-top:none}
+
+.set-num{
+  width:28px;height:28px;
+  border-radius:50%;
+  background:var(--card2);
+  color:var(--t2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700;
+}
+.set-row.active .set-num{
+  background:var(--acc);color:#fff;
+}
+.set-row.confirmed{background:var(--card2);border-radius:8px;margin:2px 0;padding:8px 6px}
+.set-row.confirmed .set-num{background:var(--grn-bg);color:var(--grn)}
+
+.set-type-btn{
+  font-size:10px;
+  padding:4px 2px;
+  border-radius:6px;
+  background:var(--inp);
+  border:1px solid var(--brd);
+  color:var(--t2);
+  font-weight:700;
+  letter-spacing:0.5px;
+  text-transform:uppercase;
+  width:100%;
+  height:36px;
+}
+
+.set-input{
+  width:100%;
+  height:36px;
+  background:var(--inp);
+  border:1px solid var(--brd);
+  border-radius:8px;
+  color:var(--text);
+  font-size:22px;
+  font-weight:700;
+  text-align:center;
+  padding:0 4px;
+  -moz-appearance:textfield;
+}
+.set-input::-webkit-outer-spin-button,
+.set-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.set-input:focus{outline:none;border-color:var(--acc)}
+
+.set-x{
+  text-align:center;
+  color:var(--t3);
+  font-size:14px;
+}
+
+.set-confirm{
+  width:40px;height:36px;
+  background:var(--acc);
+  color:#fff;
+  border-radius:8px;
+  font-size:18px;
+  font-weight:700;
+}
+.set-confirm:active{background:var(--acc-dk)}
+.set-confirm:disabled{opacity:0.4;background:var(--card2)}
+
+.set-done-values{
+  display:flex;
+  align-items:center;
+  gap:4px;
+  font-size:15px;
+  font-weight:600;
+  color:var(--text);
+  grid-column:3 / 6;
+}
+.set-done-values .unit{font-size:11px;color:var(--t3);font-weight:500}
+.set-edit-btn{
+  font-size:10px;
+  padding:4px 8px;
+  border-radius:6px;
+  background:transparent;
+  border:1px solid var(--brd);
+  color:var(--t3);
+  grid-column:6 / 7;
+}
+.record-flag{
+  background:var(--grn-bg);
+  color:var(--grn);
+  font-size:9px;
+  padding:2px 5px;
+  border-radius:4px;
+  font-weight:700;
+  letter-spacing:0.5px;
+  margin-left:4px;
+}
+
+.set-type-pill{
+  background:var(--inp);
+  color:var(--t3);
+  font-size:9px;
+  padding:3px 6px;
+  border-radius:4px;
+  font-weight:700;
+  letter-spacing:0.5px;
+}
+
+.ex-footer-actions{
+  display:flex;
+  gap:8px;
+  margin-top:10px;
+  padding-top:10px;
+  border-top:1px solid var(--brd);
+  flex-wrap:wrap;
+}
+.ex-footer-actions button{
+  font-size:11px;
+  padding:6px 10px;
+  border-radius:6px;
+  background:var(--card2);
+  border:1px solid var(--brd);
+  color:var(--t2);
+}
+
+/* Add exercise row */
+
+.add-exercise-row{
+  display:flex;
+  gap:8px;
+  margin:16px 0;
+}
+.add-exercise-row input{
+  flex:1;
+  background:var(--inp);
+  border:1px solid var(--brd);
+  border-radius:var(--radius-sm);
+  color:var(--text);
+  padding:12px 14px;
+  font-size:16px;
+}
+.add-exercise-row input:focus{outline:none;border-color:var(--acc)}
+.add-exercise-row button{
+  background:var(--acc);
+  color:#fff;
+  width:50px;
+  border-radius:var(--radius-sm);
+  font-size:22px;
+  font-weight:700;
+}
+
+.exercise-suggestions{
+  background:var(--card);
+  border:1px solid var(--brd);
+  border-radius:var(--radius-sm);
+  margin-top:-8px;
+  margin-bottom:16px;
+  max-height:200px;
+  overflow-y:auto;
+}
+.exercise-suggestion{
+  padding:12px 14px;
+  border-bottom:1px solid var(--brd);
+  font-size:15px;
+  cursor:pointer;
+}
+.exercise-suggestion:last-child{border-bottom:none}
+.exercise-suggestion:active{background:var(--card2)}
+
+/* ── Records screen ─────────────────────────────────────────────────────── */
+
+.record-card{
+  background:var(--card);
+  border:1px solid var(--brd);
+  border-radius:var(--radius);
+  padding:14px 16px;
+  margin-bottom:10px;
+}
+.record-card .name{
+  font-size:16px;
+  font-weight:700;
+  margin-bottom:10px;
+}
+.record-stats{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+.record-stat{
+  background:var(--card2);
+  border-radius:8px;
+  padding:10px;
+}
+.record-stat .lbl{
+  font-size:9px;
+  color:var(--t4);
+  letter-spacing:1px;
+  text-transform:uppercase;
+  margin-bottom:4px;
+}
+.record-stat .val{
+  font-size:18px;
+  font-weight:700;
+  color:var(--acc);
+  margin-bottom:2px;
+}
+.record-stat .det{
+  font-size:11px;
+  color:var(--t3);
+}
+.record-stat .date{
+  font-size:10px;
+  color:var(--t4);
+  margin-top:2px;
+}
+
+/* ── Info screen ────────────────────────────────────────────────────────── */
+
+.info-section{
+  background:var(--card);
+  border:1px solid var(--brd);
+  border-radius:var(--radius);
+  padding:16px;
+  margin-bottom:12px;
+}
+.info-section h3{
+  font-size:13px;
+  letter-spacing:1px;
+  text-transform:uppercase;
+  color:var(--t3);
+  margin-bottom:10px;
+}
+.info-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:8px 0;
+  border-top:1px solid var(--brd);
+  font-size:14px;
+}
+.info-row:first-child{border-top:none;padding-top:0}
+.info-row .lbl{color:var(--t2)}
+.info-row .val{color:var(--text);font-weight:600}
+
+.info-section button{
+  width:100%;
+  margin-top:8px;
+}
+
+.onboarding-card{
+  background:var(--card);
+  border:2px solid var(--acc);
+  border-radius:var(--radius);
+  padding:16px;
+  margin-bottom:12px;
+}
+.onboarding-card h3{
+  font-size:15px;
+  color:var(--acc);
+  margin-bottom:10px;
+}
+.onboarding-card ol{
+  padding-left:20px;
+  font-size:14px;
+  line-height:1.6;
+  color:var(--t2);
+}
+.onboarding-card .dismiss{
+  margin-top:12px;
+  font-size:12px;
+  color:var(--t3);
+  text-decoration:underline;
+  background:none;
+  border:none;
+  padding:0;
+}
+
+/* ── Tab bar ────────────────────────────────────────────────────────────── */
+
+#tab-bar{
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  height:calc(var(--tab-h) + env(safe-area-inset-bottom));
+  padding-bottom:env(safe-area-inset-bottom);
+  background:var(--bg);
+  border-top:1px solid var(--brd);
+  display:flex;
+  z-index:30;
+}
+.tab-btn{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  color:var(--t4);
+  font-size:10px;
+  letter-spacing:0.5px;
+  gap:3px;
+  padding:6px 0;
+}
+.tab-btn svg{
+  width:24px;
+  height:24px;
+  stroke:currentColor;
+  stroke-width:1.8;
+  fill:none;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+}
+.tab-btn.active{color:var(--acc)}
+
+/* ── Modals ─────────────────────────────────────────────────────────────── */
+
+.modal-backdrop{
+  position:fixed;
+  top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,0.7);
+  z-index:100;
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+}
+.modal-backdrop.center{align-items:center}
+.modal{
+  background:var(--card);
+  border:1px solid var(--brd);
+  border-radius:var(--radius) var(--radius) 0 0;
+  padding:20px;
+  width:100%;
+  max-width:500px;
+  max-height:85vh;
+  overflow-y:auto;
+  padding-bottom:calc(20px + env(safe-area-inset-bottom));
+}
+.modal-backdrop.center .modal{
+  border-radius:var(--radius);
+  max-height:70vh;
+}
+.modal h3{
+  font-size:16px;
+  margin-bottom:14px;
+}
+.modal input[type="text"]{
+  width:100%;
+  background:var(--inp);
+  border:1px solid var(--brd);
+  border-radius:var(--radius-sm);
+  color:var(--text);
+  padding:12px 14px;
+  font-size:16px;
+  margin-bottom:12px;
+}
+.modal input:focus{outline:none;border-color:var(--acc)}
+.modal-actions{display:flex;gap:8px}
+.modal-actions button{flex:1;padding:14px;font-size:15px;font-weight:600;border-radius:var(--radius-sm)}
+.modal-actions .cancel{background:var(--card2);color:var(--t2);border:1px solid var(--brd)}
+.modal-actions .confirm{background:var(--acc);color:#fff}
+.modal-actions .danger{background:var(--red-bg);color:var(--red-t);border:1px solid var(--red-brd)}
+.modal p{font-size:14px;color:var(--t2);line-height:1.5;margin-bottom:14px}
+
+/* ── Recap screen ───────────────────────────────────────────────────────── */
+
+.recap-title{
+  font-family:Impact,'Arial Narrow',sans-serif;
+  font-size:40px;
+  letter-spacing:2px;
+  margin-bottom:4px;
+  margin-top:12px;
+}
+.recap-title .ok{color:var(--acc)}
+.recap-subtitle{
+  font-size:13px;
+  color:var(--t3);
+  margin-bottom:24px;
+}
+.recap-stats{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:8px;
+  margin:20px 0;
+}
+.recap-stat{
+  background:var(--card);
+  border:1px solid var(--brd);
+  border-radius:var(--radius);
+  padding:14px 8px;
+  text-align:center;
+}
+.recap-stat .lbl{
+  font-size:9px;
+  color:var(--t4);
+  letter-spacing:1px;
+  text-transform:uppercase;
+  margin-bottom:6px;
+}
+.recap-stat .val{
+  font-size:20px;
+  font-weight:700;
+  color:var(--text);
+}
+.recap-pr-card{
+  background:var(--grn-bg);
+  border:1px solid var(--grn);
+  border-radius:var(--radius);
+  padding:14px;
+  margin-bottom:10px;
+}
+.recap-pr-card .badge{
+  font-size:10px;
+  color:var(--grn);
+  letter-spacing:1.5px;
+  font-weight:700;
+  margin-bottom:4px;
+}
+.recap-pr-card .name{
+  font-size:16px;
+  font-weight:700;
+  margin-bottom:4px;
+}
+.recap-pr-card .det{
+  font-size:13px;
+  color:var(--t2);
+}
+
+/* ── Close session button ───────────────────────────────────────────────── */
+
+.close-session-btn{
+  margin-top:16px;
+  width:100%;
+}
+
+/* Utility */
+.hidden{display:none !important}
+[hidden]{display:none !important}
+
+/* Prevent iOS zoom on input focus */
+input[type="text"],input[type="number"],input[inputmode]{
+  font-size:16px;
+}
+.set-input{font-size:22px}
+
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <header id="app-header">
+    <div class="header-top">
+      <div class="brand">GANDO <span class="gym">GYM</span></div>
+      <div id="session-timer" hidden>00:00</div>
+    </div>
+    <div class="header-sub"><span id="section-label">SESSIONE</span></div>
+  </header>
+
+  <main id="screens">
+    <section id="screen-session" class="screen" data-screen="session">
+      <div class="loading">Caricamento…</div>
+    </section>
+    <section id="screen-records" class="screen" data-screen="records" hidden></section>
+    <section id="screen-info" class="screen" data-screen="info" hidden></section>
+  </main>
+
+  <nav id="tab-bar" role="tablist">
+    <button class="tab-btn active" data-tab="session" aria-label="Sessione">
+      <svg viewBox="0 0 24 24">
+        <rect x="2" y="10" width="4" height="4" rx="1"/>
+        <rect x="18" y="10" width="4" height="4" rx="1"/>
+        <rect x="6" y="8" width="2" height="8" rx="1"/>
+        <rect x="16" y="8" width="2" height="8" rx="1"/>
+        <line x1="8" y1="12" x2="16" y2="12"/>
+      </svg>
+      Sessione
+    </button>
+    <button class="tab-btn" data-tab="records" aria-label="Record">
+      <svg viewBox="0 0 24 24">
+        <path d="M8 21h8M12 17v4"/>
+        <path d="M7 4H4v3a5 5 0 0 0 3 4.6"/>
+        <path d="M17 4h3v3a5 5 0 0 1-3 4.6"/>
+        <path d="M7 4h10v7a5 5 0 0 1-10 0V4z"/>
+      </svg>
+      Record
+    </button>
+    <button class="tab-btn" data-tab="info" aria-label="Info">
+      <svg viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="8" x2="12" y2="8.01"/>
+        <line x1="12" y1="12" x2="12" y2="16"/>
+      </svg>
+      Info
+    </button>
+  </nav>
+
+</div>
+
+<!-- Modal container -->
+<div id="modal-root"></div>
+
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GANDO GYM — Local-first workout tracker for iPhone
+   Spec v7, single-file build.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+// ── Utilities ──────────────────────────────────────────────────────────────
+
+const SET_TYPES = ['normal','warmup','top','drop','backoff','failure'];
+const SET_TYPE_LABELS = {
+  normal:'NORM', warmup:'WARM', top:'TOP',
+  drop:'DROP', backoff:'BACK', failure:'FAIL'
+};
+const SET_TYPE_CYCLE = {
+  normal:'warmup', warmup:'top', top:'drop',
+  drop:'backoff', backoff:'failure', failure:'normal'
+};
+
+const pid = (prefix) => `${prefix}_${Math.random().toString(36).slice(2,8)}${Date.now().toString(36).slice(-3)}`;
+const nowISO = () => new Date().toISOString();
+const todayDate = () => new Date().toISOString().slice(0,10);
+const fmtKg = (n) => {
+  if (n == null) return '—';
+  if (n >= 1000) return (n/1000).toFixed(1).replace(/\.0$/,'') + 'k kg';
+  return Math.round(n) + ' kg';
+};
+const fmtDate = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleDateString('it-IT',{day:'2-digit',month:'short',year:'numeric'});
+};
+const fmtDuration = (startISO, endISO) => {
+  if (!startISO || !endISO) return '—';
+  const s = (new Date(endISO) - new Date(startISO))/1000;
+  const m = Math.floor(s/60);
+  if (m < 60) return m + ' min';
+  const h = Math.floor(m/60);
+  return `${h}h ${m%60}m`;
+};
+const fmtTimer = (seconds) => {
+  const h = Math.floor(seconds/3600);
+  const m = Math.floor((seconds%3600)/60);
+  const s = seconds%60;
+  return [h,m,s].map(x=>String(x).padStart(2,'0')).join(':');
+};
+
+const escapeHTML = (s) => String(s==null?'':s)
+  .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+
+// ── Database (Dexie) ───────────────────────────────────────────────────────
+
+const db = new Dexie('GandoGymDB');
+db.version(1).stores({
+  settings:         'key',
+  exercises:        '++id, public_id, name, active',
+  templates:        '++id, public_id, name, active, updated_at',
+  template_items:   '++id, public_id, template_public_id, order_index',
+  sessions:         '++id, public_id, session_date, status, updated_at',
+  session_items:    '++id, public_id, session_public_id, order_index',
+  sets:             '++id, public_id, session_item_public_id, set_no',
+  exercise_records: '++id, exercise_public_id',
+  app_events:       '++id, event_type, created_at'
+});
+
+// ── Settings store ─────────────────────────────────────────────────────────
+
+const Settings = {
+  async get(key) {
+    const row = await db.settings.get(key);
+    return row ? row.value : undefined;
+  },
+  async set(key, value) {
+    await db.settings.put({ key, value, updated_at: nowISO() });
+  },
+  async initDefaults() {
+    const defaults = {
+      default_sets_per_exercise: 3,
+      home_screen_recommended_seen: false,
+      last_successful_export_at: null,
+      storage_persist_requested: false,
+      storage_persist_granted: false,
+    };
+    for (const [k,v] of Object.entries(defaults)) {
+      if (await this.get(k) === undefined) await this.set(k, v);
+    }
+  }
+};
+
+// ── Storage API ────────────────────────────────────────────────────────────
+
+const StorageService = {
+  async requestPersist() {
+    await Settings.set('storage_persist_requested', true);
+    if (navigator.storage && navigator.storage.persist) {
+      try {
+        const granted = await navigator.storage.persist();
+        await Settings.set('storage_persist_granted', !!granted);
+        return granted;
+      } catch(e){ return false; }
+    }
+    return false;
+  },
+  async getStatus() {
+    let persisted = false, estimateMB = null;
+    try {
+      if (navigator.storage && navigator.storage.persisted) {
+        persisted = await navigator.storage.persisted();
+      }
+      if (navigator.storage && navigator.storage.estimate) {
+        const est = await navigator.storage.estimate();
+        if (est.usage) estimateMB = (est.usage/1024/1024).toFixed(2);
+      }
+    } catch(_){}
+    return { persisted, estimateMB };
+  }
+};
+
+// ── Exercises store ────────────────────────────────────────────────────────
+
+const Exercises = {
+  async all() {
+    return await db.exercises.filter(e => e.active !== false).toArray();
+  },
+  async getByPublicId(publicId) {
+    return await db.exercises.where('public_id').equals(publicId).first();
+  },
+  async findOrCreate(name) {
+    const trimmed = name.trim();
+    if (!trimmed) return null;
+    const existing = await db.exercises
+      .filter(e => e.active !== false && e.name.toLowerCase() === trimmed.toLowerCase())
+      .first();
+    if (existing) return existing;
+    const public_id = pid('ex');
+    const id = await db.exercises.add({
+      public_id,
+      name: trimmed,
+      active: true,
+      created_at: nowISO(),
+      updated_at: nowISO()
+    });
+    return await db.exercises.get(id);
+  },
+  async searchByName(q) {
+    const query = q.toLowerCase().trim();
+    if (!query) return [];
+    const all = await this.all();
+    return all.filter(e => e.name.toLowerCase().includes(query)).slice(0, 8);
+  }
+};
+
+// ── Templates store ────────────────────────────────────────────────────────
+
+const Templates = {
+  async all() {
+    return await db.templates
+      .filter(t => t.active !== false)
+      .reverse()
+      .sortBy('updated_at');
+  },
+  async getByPublicId(publicId) {
+    return await db.templates.where('public_id').equals(publicId).first();
+  },
+  async create(name, itemDefs /* [{exercise_public_id, default_sets}] */) {
+    const public_id = pid('tpl');
+    const now = nowISO();
+    await db.templates.add({
+      public_id, name, active:true,
+      created_at: now, updated_at: now
+    });
+    for (let i=0; i<itemDefs.length; i++) {
+      const def = itemDefs[i];
+      const ex = await Exercises.getByPublicId(def.exercise_public_id);
+      await db.template_items.add({
+        public_id: pid('ti'),
+        template_public_id: public_id,
+        exercise_public_id: def.exercise_public_id,
+        exercise_name_snapshot: ex ? ex.name : '?',
+        order_index: i,
+        default_sets: def.default_sets || 3,
+      });
+    }
+    return public_id;
+  },
+  async getItems(templatePublicId) {
+    return await db.template_items
+      .where('template_public_id').equals(templatePublicId)
+      .sortBy('order_index');
+  },
+  async delete(templatePublicId) {
+    await db.transaction('rw', db.templates, db.template_items, async () => {
+      const tpl = await db.templates.where('public_id').equals(templatePublicId).first();
+      if (tpl) await db.templates.delete(tpl.id);
+      const items = await db.template_items.where('template_public_id').equals(templatePublicId).toArray();
+      for (const it of items) await db.template_items.delete(it.id);
+    });
+  }
+};
+
+// ── Sessions store ─────────────────────────────────────────────────────────
+
+const Sessions = {
+  async createFromTemplate(templatePublicId) {
+    const tpl = await Templates.getByPublicId(templatePublicId);
+    if (!tpl) throw new Error('Template non trovato');
+    const items = await Templates.getItems(templatePublicId);
+    const public_id = pid('sess');
+    const now = nowISO();
+    await db.sessions.add({
+      public_id,
+      session_date: todayDate(),
+      start_ts: now,
+      source_type: 'template',
+      template_public_id: templatePublicId,
+      status: 'in_progress',
+      created_at: now, updated_at: now
+    });
+    for (let i=0; i<items.length; i++) {
+      const it = items[i];
+      await db.session_items.add({
+        public_id: pid('si'),
+        session_public_id: public_id,
+        planned_exercise_public_id: it.exercise_public_id,
+        performed_exercise_public_id: it.exercise_public_id,
+        exercise_name_snapshot: it.exercise_name_snapshot,
+        order_index: i,
+        item_status: 'planned',
+        is_superset: false,
+        created_at: now, updated_at: now,
+        _default_sets: it.default_sets || 3
+      });
+    }
+    // Create default empty sets
+    const sessionItems = await this.getItems(public_id);
+    for (const si of sessionItems) {
+      const defaultSets = si._default_sets || 3;
+      // Get last session defaults for pre-fill
+      const lastData = await this.getLastExerciseData(si.performed_exercise_public_id, public_id);
+      for (let n=1; n<=defaultSets; n++) {
+        await db.sets.add({
+          public_id: pid('set'),
+          session_item_public_id: si.public_id,
+          set_no: n,
+          set_type: 'normal',
+          reps: lastData.reps || null,
+          weight: lastData.weight || null,
+          completed: false,
+          set_volume: 0,
+          created_at: now, updated_at: now
+        });
+      }
+    }
+    return public_id;
+  },
+  async createEmpty() {
+    const public_id = pid('sess');
+    const now = nowISO();
+    await db.sessions.add({
+      public_id,
+      session_date: todayDate(),
+      start_ts: now,
+      source_type: 'new',
+      status: 'in_progress',
+      created_at: now, updated_at: now
+    });
+    return public_id;
+  },
+  async get(publicId) {
+    return await db.sessions.where('public_id').equals(publicId).first();
+  },
+  async getInProgress() {
+    return await db.sessions.filter(s => s.status === 'in_progress').first();
+  },
+  async getItems(sessionPublicId) {
+    const items = await db.session_items
+      .where('session_public_id').equals(sessionPublicId)
+      .sortBy('order_index');
+    // Exclude skipped/deleted
+    return items.filter(it => it.item_status !== 'skipped');
+  },
+  async getSets(sessionItemPublicId) {
+    return await db.sets
+      .where('session_item_public_id').equals(sessionItemPublicId)
+      .sortBy('set_no');
+  },
+  async getLastExerciseData(exercisePublicId, excludeSessionPublicId) {
+    // Find most recent set for this exercise
+    const allItems = await db.session_items
+      .filter(si => si.performed_exercise_public_id === exercisePublicId
+                 && si.session_public_id !== excludeSessionPublicId
+                 && si.item_status !== 'skipped')
+      .toArray();
+    if (allItems.length === 0) return {};
+    // Join with sessions to get most recent
+    const sessions = await db.sessions.toArray();
+    const sessMap = Object.fromEntries(sessions.map(s => [s.public_id, s]));
+    allItems.sort((a,b) => {
+      const sa = sessMap[a.session_public_id];
+      const sb = sessMap[b.session_public_id];
+      return (sb ? sb.start_ts : '').localeCompare(sa ? sa.start_ts : '');
+    });
+    for (const it of allItems) {
+      const sets = await this.getSets(it.public_id);
+      const completedSets = sets.filter(s => s.completed);
+      if (completedSets.length > 0) {
+        const last = completedSets[completedSets.length-1];
+        return { weight: last.weight, reps: last.reps };
+      }
+    }
+    return {};
+  },
+  async addExerciseToSession(sessionPublicId, exercisePublicId) {
+    const ex = await Exercises.getByPublicId(exercisePublicId);
+    if (!ex) return null;
+    const items = await this.getItems(sessionPublicId);
+    const maxOrder = items.reduce((m,it)=>Math.max(m,it.order_index), -1);
+    const siPublicId = pid('si');
+    const now = nowISO();
+    await db.session_items.add({
+      public_id: siPublicId,
+      session_public_id: sessionPublicId,
+      planned_exercise_public_id: exercisePublicId,
+      performed_exercise_public_id: exercisePublicId,
+      exercise_name_snapshot: ex.name,
+      order_index: maxOrder + 1,
+      item_status: 'planned',
+      is_superset: false,
+      created_at: now, updated_at: now
+    });
+    const defaultSets = await Settings.get('default_sets_per_exercise') || 3;
+    const lastData = await this.getLastExerciseData(exercisePublicId, sessionPublicId);
+    for (let n=1; n<=defaultSets; n++) {
+      await db.sets.add({
+        public_id: pid('set'),
+        session_item_public_id: siPublicId,
+        set_no: n,
+        set_type: 'normal',
+        reps: lastData.reps || null,
+        weight: lastData.weight || null,
+        completed: false,
+        set_volume: 0,
+        created_at: now, updated_at: now
+      });
+    }
+    await this.touch(sessionPublicId);
+    return siPublicId;
+  },
+  async removeItem(sessionItemPublicId) {
+    await db.transaction('rw', db.session_items, db.sets, async () => {
+      const si = await db.session_items.where('public_id').equals(sessionItemPublicId).first();
+      if (!si) return;
+      const sets = await db.sets.where('session_item_public_id').equals(sessionItemPublicId).toArray();
+      for (const s of sets) await db.sets.delete(s.id);
+      await db.session_items.delete(si.id);
+    });
+  },
+  async substituteExercise(sessionItemPublicId, newExercisePublicId) {
+    const ex = await Exercises.getByPublicId(newExercisePublicId);
+    if (!ex) return;
+    const si = await db.session_items.where('public_id').equals(sessionItemPublicId).first();
+    if (!si) return;
+    await db.session_items.update(si.id, {
+      performed_exercise_public_id: newExercisePublicId,
+      exercise_name_snapshot: ex.name,
+      item_status: 'substituted',
+      updated_at: nowISO()
+    });
+  },
+  async addSet(sessionItemPublicId) {
+    const sets = await this.getSets(sessionItemPublicId);
+    const newNo = sets.length + 1;
+    const lastSet = sets[sets.length-1];
+    await db.sets.add({
+      public_id: pid('set'),
+      session_item_public_id: sessionItemPublicId,
+      set_no: newNo,
+      set_type: 'normal',
+      reps: lastSet ? lastSet.reps : null,
+      weight: lastSet ? lastSet.weight : null,
+      completed: false,
+      set_volume: 0,
+      created_at: nowISO(), updated_at: nowISO()
+    });
+  },
+  async removeLastSet(sessionItemPublicId) {
+    const sets = await this.getSets(sessionItemPublicId);
+    if (sets.length <= 1) return; // keep at least 1
+    const last = sets[sets.length-1];
+    await db.sets.delete(last.id);
+  },
+  async confirmSet(setPublicId, weight, reps, setType) {
+    const setRow = await db.sets.where('public_id').equals(setPublicId).first();
+    if (!setRow) return null;
+    const vol = (Number(weight) || 0) * (Number(reps) || 0);
+    await db.sets.update(setRow.id, {
+      weight: Number(weight),
+      reps: Number(reps),
+      set_type: setType,
+      completed: true,
+      set_volume: vol,
+      updated_at: nowISO()
+    });
+    // Propagate weight to next non-confirmed set of same exercise
+    const siblings = await this.getSets(setRow.session_item_public_id);
+    for (const s of siblings) {
+      if (s.set_no > setRow.set_no && !s.completed && !s.weight) {
+        await db.sets.update(s.id, { weight: Number(weight), updated_at: nowISO() });
+      }
+    }
+    // Update max_set_volume record
+    const si = await db.session_items.where('public_id').equals(setRow.session_item_public_id).first();
+    if (si) {
+      const exId = si.performed_exercise_public_id;
+      const recDetail = `${weight} kg × ${reps} rep`;
+      const isNewSetRecord = await Records.updateSetRecord(exId, si.exercise_name_snapshot, vol, recDetail);
+      return { volume: vol, isNewSetRecord };
+    }
+    return { volume: vol, isNewSetRecord: false };
+  },
+  async unconfirmSet(setPublicId) {
+    const setRow = await db.sets.where('public_id').equals(setPublicId).first();
+    if (!setRow) return;
+    await db.sets.update(setRow.id, { completed: false, updated_at: nowISO() });
+  },
+  async toggleSuperset(sessionItemPublicId) {
+    // Toggle superset with the NEXT item in order
+    const si = await db.session_items.where('public_id').equals(sessionItemPublicId).first();
+    if (!si) return;
+    const all = await this.getItems(si.session_public_id);
+    const idx = all.findIndex(x => x.public_id === sessionItemPublicId);
+    if (idx < 0 || idx >= all.length - 1) return; // no next
+    const next = all[idx+1];
+    if (si.is_superset && si.pair_group_id && next.pair_group_id === si.pair_group_id) {
+      // Unlink
+      await db.session_items.update(si.id, { is_superset:false, pair_group_id:null, updated_at:nowISO() });
+      await db.session_items.update(next.id, { is_superset:false, pair_group_id:null, updated_at:nowISO() });
+    } else {
+      const pg = pid('pg');
+      await db.session_items.update(si.id, { is_superset:true, pair_group_id:pg, updated_at:nowISO() });
+      await db.session_items.update(next.id, { is_superset:true, pair_group_id:pg, updated_at:nowISO() });
+    }
+  },
+  async moveItem(sessionItemPublicId, direction /* 'up' | 'down' */) {
+    const si = await db.session_items.where('public_id').equals(sessionItemPublicId).first();
+    if (!si) return;
+    const all = await this.getItems(si.session_public_id);
+    const idx = all.findIndex(x => x.public_id === sessionItemPublicId);
+    if (idx < 0) return;
+    const swapIdx = direction === 'up' ? idx-1 : idx+1;
+    if (swapIdx < 0 || swapIdx >= all.length) return;
+    const other = all[swapIdx];
+    const tmp = si.order_index;
+    await db.session_items.update(si.id, { order_index: other.order_index, updated_at: nowISO() });
+    await db.session_items.update(other.id, { order_index: tmp, updated_at: nowISO() });
+  },
+  async touch(sessionPublicId) {
+    const s = await this.get(sessionPublicId);
+    if (s) await db.sessions.update(s.id, { updated_at: nowISO() });
+  },
+  async close(sessionPublicId) {
+    const session = await this.get(sessionPublicId);
+    if (!session) return { newRecords: [], stats: null };
+    const now = nowISO();
+    await db.sessions.update(session.id, {
+      status: 'completed',
+      end_ts: now,
+      updated_at: now
+    });
+    // Process session records
+    const items = await this.getItems(sessionPublicId);
+    const newRecords = [];
+    let totalSets = 0, totalVolume = 0;
+    for (const it of items) {
+      const sets = await this.getSets(it.public_id);
+      const completedSets = sets.filter(s => s.completed);
+      if (completedSets.length === 0) continue;
+      const sessionExVol = completedSets.reduce((a,s) => a + s.set_volume, 0);
+      totalSets += completedSets.length;
+      totalVolume += sessionExVol;
+      const avgW = completedSets.reduce((a,s)=>a+s.weight,0)/completedSets.length;
+      const avgR = completedSets.reduce((a,s)=>a+s.reps,0)/completedSets.length;
+      const detail = `${completedSets.length} serie · ${Math.round(avgW)} kg · ~${Math.round(avgR)} rep`;
+      const updated = await Records.updateSessionRecord(
+        it.performed_exercise_public_id, it.exercise_name_snapshot,
+        sessionExVol, detail
+      );
+      if (updated) newRecords.push({
+        type:'session', name: it.exercise_name_snapshot,
+        value: sessionExVol, detail
+      });
+      // Check if any individual set was a new set record (updated during confirm)
+      for (const s of completedSets) {
+        // We track this via the confirmSet return; but we can also re-check after close
+      }
+    }
+    return {
+      newRecords,
+      stats: {
+        duration: fmtDuration(session.start_ts, now),
+        totalSets,
+        totalVolume
+      },
+      session: { ...session, end_ts: now }
+    };
+  },
+  async saveAsTemplate(sessionPublicId, templateName) {
+    const items = await this.getItems(sessionPublicId);
+    const defs = items.map(it => ({
+      exercise_public_id: it.performed_exercise_public_id,
+      default_sets: 3
+    }));
+    return await Templates.create(templateName, defs);
+  },
+  async lastCompleted() {
+    const sessions = await db.sessions
+      .filter(s => s.status === 'completed')
+      .reverse()
+      .sortBy('start_ts');
+    return sessions[0] || null;
+  },
+  async computeStats(sessionPublicId) {
+    const items = await this.getItems(sessionPublicId);
+    let totalSets = 0, totalVolume = 0;
+    for (const it of items) {
+      const sets = await this.getSets(it.public_id);
+      const done = sets.filter(s=>s.completed);
+      totalSets += done.length;
+      totalVolume += done.reduce((a,s)=>a+s.set_volume,0);
+    }
+    return { totalSets, totalVolume };
+  }
+};
+
+// ── Records store ──────────────────────────────────────────────────────────
+
+const Records = {
+  async all() {
+    const rows = await db.exercise_records.toArray();
+    rows.sort((a,b) => (b.max_session_volume||0) - (a.max_session_volume||0));
+    return rows;
+  },
+  async getByExercise(exercisePublicId) {
+    return await db.exercise_records.where('exercise_public_id').equals(exercisePublicId).first();
+  },
+  async updateSetRecord(exercisePublicId, exerciseName, newVolume, detail) {
+    const existing = await this.getByExercise(exercisePublicId);
+    const now = nowISO();
+    if (!existing) {
+      await db.exercise_records.add({
+        exercise_public_id: exercisePublicId,
+        exercise_name_snapshot: exerciseName,
+        max_set_volume: newVolume,
+        max_set_volume_date: todayDate(),
+        max_set_volume_detail: detail,
+        max_session_volume: null,
+        updated_at: now
+      });
+      return true;
+    }
+    if (!existing.max_set_volume || newVolume > existing.max_set_volume) {
+      await db.exercise_records.update(existing.id, {
+        max_set_volume: newVolume,
+        max_set_volume_date: todayDate(),
+        max_set_volume_detail: detail,
+        exercise_name_snapshot: exerciseName,
+        updated_at: now
+      });
+      return true;
+    }
+    return false;
+  },
+  async updateSessionRecord(exercisePublicId, exerciseName, newVolume, detail) {
+    const existing = await this.getByExercise(exercisePublicId);
+    const now = nowISO();
+    if (!existing) {
+      await db.exercise_records.add({
+        exercise_public_id: exercisePublicId,
+        exercise_name_snapshot: exerciseName,
+        max_session_volume: newVolume,
+        max_session_volume_date: todayDate(),
+        max_session_volume_detail: detail,
+        updated_at: now
+      });
+      return true;
+    }
+    if (!existing.max_session_volume || newVolume > existing.max_session_volume) {
+      await db.exercise_records.update(existing.id, {
+        max_session_volume: newVolume,
+        max_session_volume_date: todayDate(),
+        max_session_volume_detail: detail,
+        exercise_name_snapshot: exerciseName,
+        updated_at: now
+      });
+      return true;
+    }
+    return false;
+  }
+};
+
+// ── Import / Export ────────────────────────────────────────────────────────
+
+const ImportExport = {
+  async exportAll() {
+    const data = {
+      settings:         await db.settings.toArray(),
+      exercises:        await db.exercises.toArray(),
+      templates:        await db.templates.toArray(),
+      template_items:   await db.template_items.toArray(),
+      sessions:         await db.sessions.toArray(),
+      session_items:    await db.session_items.toArray(),
+      sets:             await db.sets.toArray(),
+      exercise_records: await db.exercise_records.toArray(),
+      app_events:       await db.app_events.toArray(),
+    };
+    const payload = {
+      app: 'GandoGym',
+      schema_version: 7,
+      exported_at: nowISO(),
+      meta: { platform:'web', export_type:'full' },
+      data,
+      checks: {
+        sessions_count: data.sessions.length,
+        sets_count: data.sets.length,
+        exercises_count: data.exercises.length,
+        records_count: data.exercise_records.length
+      }
+    };
+    await Settings.set('last_successful_export_at', nowISO());
+    await db.app_events.add({ event_type:'export', payload:{counts:payload.checks}, created_at: nowISO() });
+    return payload;
+  },
+  async downloadExport() {
+    const payload = await this.exportAll();
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `gandogym-backup-${todayDate()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  },
+  async importFromFile(file, mode /* 'restore' | 'merge' */) {
+    const text = await file.text();
+    const payload = JSON.parse(text);
+    if (!payload || !payload.data) throw new Error('File non valido');
+    if (mode === 'restore') {
+      await db.transaction('rw', db.settings, db.exercises, db.templates, db.template_items,
+        db.sessions, db.session_items, db.sets, db.exercise_records, db.app_events, async () => {
+          await db.settings.clear();
+          await db.exercises.clear();
+          await db.templates.clear();
+          await db.template_items.clear();
+          await db.sessions.clear();
+          await db.session_items.clear();
+          await db.sets.clear();
+          await db.exercise_records.clear();
+          await db.app_events.clear();
+          for (const row of payload.data.settings || []) await db.settings.put(row);
+          for (const row of payload.data.exercises || []) await db.exercises.put(row);
+          for (const row of payload.data.templates || []) await db.templates.put(row);
+          for (const row of payload.data.template_items || []) await db.template_items.put(row);
+          for (const row of payload.data.sessions || []) await db.sessions.put(row);
+          for (const row of payload.data.session_items || []) await db.session_items.put(row);
+          for (const row of payload.data.sets || []) await db.sets.put(row);
+          for (const row of payload.data.exercise_records || []) await db.exercise_records.put(row);
+        });
+    } else {
+      // merge: add only if public_id missing
+      const mergeStore = async (store, rows, keyField='public_id') => {
+        for (const row of rows || []) {
+          if (row[keyField]) {
+            const existing = await store.where(keyField).equals(row[keyField]).first();
+            if (!existing) {
+              const { id, ...rest } = row;
+              await store.add(rest);
+            }
+          } else if (keyField === 'key') {
+            const existing = await store.get(row.key);
+            if (!existing) await store.put(row);
+          }
+        }
+      };
+      await mergeStore(db.settings, payload.data.settings, 'key');
+      await mergeStore(db.exercises, payload.data.exercises);
+      await mergeStore(db.templates, payload.data.templates);
+      await mergeStore(db.template_items, payload.data.template_items);
+      await mergeStore(db.sessions, payload.data.sessions);
+      await mergeStore(db.session_items, payload.data.session_items);
+      await mergeStore(db.sets, payload.data.sets);
+      // exercise_records: use exercise_public_id as key
+      for (const row of payload.data.exercise_records || []) {
+        const existing = await db.exercise_records.where('exercise_public_id').equals(row.exercise_public_id).first();
+        if (!existing) {
+          const { id, ...rest } = row;
+          await db.exercise_records.add(rest);
+        }
+      }
+    }
+    await db.app_events.add({ event_type:'import', payload:{mode}, created_at: nowISO() });
+  },
+  async resetAll() {
+    await db.transaction('rw', db.settings, db.exercises, db.templates, db.template_items,
+      db.sessions, db.session_items, db.sets, db.exercise_records, db.app_events, async () => {
+        await db.exercises.clear();
+        await db.templates.clear();
+        await db.template_items.clear();
+        await db.sessions.clear();
+        await db.session_items.clear();
+        await db.sets.clear();
+        await db.exercise_records.clear();
+        await db.app_events.clear();
+      });
+    await Settings.set('last_successful_export_at', null);
+  }
+};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// UI LAYER
+// ═══════════════════════════════════════════════════════════════════════════
+
+const $ = (sel, ctx=document) => ctx.querySelector(sel);
+const $$ = (sel, ctx=document) => Array.from(ctx.querySelectorAll(sel));
+
+const State = {
+  currentTab: 'session',
+  sessionView: 'start',       // 'start' | 'templates' | 'template-edit' | 'active' | 'recap'
+  activeSessionId: null,
+  selectedTemplateId: null,
+  templateEditDraft: null,    // { name, items: [{exercise_public_id, name, default_sets}] }
+  recapData: null,
+  sessionTimer: null,
+  newSetRecordsInSession: {}, // {exercisePublicId: {name, detail, vol}}
+};
+
+// ── Modal ──────────────────────────────────────────────────────────────────
+
+function showModal({ title, bodyHTML, actions, center=true, onMount }) {
+  return new Promise((resolve) => {
+    const root = $('#modal-root');
+    const actionsHTML = actions.map((a,i) => {
+      const cls = a.kind === 'confirm' ? 'confirm'
+                : a.kind === 'danger'  ? 'danger'
+                : 'cancel';
+      return `<button data-idx="${i}" class="${cls}">${escapeHTML(a.label)}</button>`;
+    }).join('');
+    root.innerHTML = `
+      <div class="modal-backdrop ${center?'center':''}">
+        <div class="modal">
+          ${title ? `<h3>${escapeHTML(title)}</h3>` : ''}
+          ${bodyHTML || ''}
+          <div class="modal-actions">${actionsHTML}</div>
+        </div>
+      </div>`;
+    const cleanup = () => { root.innerHTML = ''; };
+    $$('button[data-idx]', root).forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = Number(btn.dataset.idx);
+        const action = actions[idx];
+        const modal = $('.modal', root);
+        const result = action.onClick ? action.onClick(modal) : action.value;
+        cleanup();
+        resolve(result);
+      });
+    });
+    if (onMount) onMount($('.modal', root));
+  });
+}
+
+function confirm(message, { dangerous=false, confirmLabel='Conferma' } = {}) {
+  return showModal({
+    bodyHTML: `<p>${escapeHTML(message)}</p>`,
+    actions: [
+      { label:'Annulla', kind:'cancel', value:false },
+      { label: confirmLabel, kind: dangerous?'danger':'confirm', value:true }
+    ]
+  });
+}
+
+function prompt(message, defaultValue='') {
+  return showModal({
+    bodyHTML: `<p>${escapeHTML(message)}</p>
+      <input type="text" id="prompt-input" value="${escapeHTML(defaultValue)}" />`,
+    actions: [
+      { label:'Annulla', kind:'cancel', value:null },
+      { label:'OK', kind:'confirm', onClick: (modal) => {
+        return $('#prompt-input', modal).value.trim() || null;
+      }}
+    ],
+    onMount: (modal) => {
+      const inp = $('#prompt-input', modal);
+      inp.focus();
+      inp.select();
+    }
+  });
+}
+
+// ── Navigation ─────────────────────────────────────────────────────────────
+
+async function navigate(tab) {
+  State.currentTab = tab;
+  $$('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  const labels = { session:'SESSIONE', records:'RECORD', info:'INFO' };
+  $('#section-label').textContent = labels[tab];
+  $$('.screen').forEach(s => s.hidden = s.dataset.screen !== tab);
+  if (tab === 'session') await renderSession();
+  else if (tab === 'records') await renderRecords();
+  else if (tab === 'info') await renderInfo();
+}
+
+// ── Session tab ────────────────────────────────────────────────────────────
+
+async function renderSession() {
+  // Check for in-progress session
+  const inProg = await Sessions.getInProgress();
+  if (inProg) {
+    State.activeSessionId = inProg.public_id;
+    State.sessionView = 'active';
+    await renderSessionActive();
+    return;
+  }
+  if (State.sessionView === 'active') State.sessionView = 'start';
+
+  if (State.sessionView === 'start') await renderSessionStart();
+  else if (State.sessionView === 'templates') await renderTemplatePicker();
+  else if (State.sessionView === 'template-edit') await renderTemplateEditor();
+  else if (State.sessionView === 'recap') renderRecap();
+  else await renderSessionStart();
+}
+
+async function renderSessionStart() {
+  const root = $('#screen-session');
+  const last = await Sessions.lastCompleted();
+  let lastHTML = '';
+  if (last) {
+    const stats = await Sessions.computeStats(last.public_id);
+    lastHTML = `
+      <div class="last-session-card">
+        <div class="lbl">Ultima sessione</div>
+        <div class="name">${escapeHTML(last.source_type === 'template' ? 'Da template' : 'Sessione libera')}</div>
+        <div class="meta">${fmtDate(last.start_ts)} · ${fmtDuration(last.start_ts, last.end_ts)} · ${stats.totalSets} serie · ${fmtKg(stats.totalVolume)}</div>
+      </div>`;
+  }
+  root.innerHTML = `
+    <div class="start-actions">
+      <button class="btn-primary" id="btn-from-template">Da template</button>
+      <button class="btn-secondary" id="btn-new">Nuova</button>
+    </div>
+    ${lastHTML}
+  `;
+  $('#btn-from-template', root).addEventListener('click', async () => {
+    State.sessionView = 'templates';
+    State.selectedTemplateId = null;
+    await renderSession();
+  });
+  $('#btn-new', root).addEventListener('click', async () => {
+    const id = await Sessions.createEmpty();
+    State.activeSessionId = id;
+    State.sessionView = 'active';
+    State.newSetRecordsInSession = {};
+    await renderSession();
+  });
+}
+
+async function renderTemplatePicker() {
+  const root = $('#screen-session');
+  const templates = await Templates.all();
+  const selectedId = State.selectedTemplateId;
+  const listHTML = templates.length === 0
+    ? `<div class="empty-state">Nessun template. Creane uno nuovo per iniziare.</div>`
+    : templates.map(t => {
+        const selected = t.public_id === selectedId;
+        return `<div class="template-item ${selected?'selected':''}" data-tpl="${t.public_id}">
+          <div class="info">
+            <div class="name">${escapeHTML(t.name)}</div>
+            <div class="meta" id="tpl-meta-${t.public_id}">…</div>
+          </div>
+          <div class="actions">
+            <button class="btn-small danger" data-action="delete" data-tpl="${t.public_id}">Elimina</button>
+          </div>
+        </div>`;
+      }).join('');
+
+  root.innerHTML = `
+    <div class="back-row">
+      <button class="btn-tertiary" id="btn-back">← Indietro</button>
+    </div>
+    <div class="section-title">Template</div>
+    <div class="template-list">${listHTML}</div>
+    <button class="btn-secondary" id="btn-new-tpl">+ Nuovo template</button>
+    ${selectedId ? `<div class="go-button-row"><button class="btn-primary" id="btn-go">Vai</button></div>` : ''}
+  `;
+  // Fill meta
+  for (const t of templates) {
+    const items = await Templates.getItems(t.public_id);
+    const el = $(`#tpl-meta-${t.public_id}`, root);
+    if (el) el.textContent = `${items.length} esercizi`;
+  }
+  $('#btn-back', root).addEventListener('click', async () => {
+    State.sessionView = 'start';
+    await renderSession();
+  });
+  $$('.template-item', root).forEach(el => {
+    el.addEventListener('click', async (e) => {
+      if (e.target.closest('[data-action]')) return;
+      State.selectedTemplateId = el.dataset.tpl;
+      await renderSession();
+    });
+  });
+  $$('[data-action="delete"]', root).forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const ok = await confirm('Eliminare questo template?', { dangerous:true, confirmLabel:'Elimina' });
+      if (ok) {
+        await Templates.delete(btn.dataset.tpl);
+        if (State.selectedTemplateId === btn.dataset.tpl) State.selectedTemplateId = null;
+        await renderSession();
+      }
+    });
+  });
+  $('#btn-new-tpl', root).addEventListener('click', async () => {
+    State.sessionView = 'template-edit';
+    State.templateEditDraft = { name:'', items:[] };
+    await renderSession();
+  });
+  const goBtn = $('#btn-go', root);
+  if (goBtn) goBtn.addEventListener('click', async () => {
+    const id = await Sessions.createFromTemplate(State.selectedTemplateId);
+    State.activeSessionId = id;
+    State.sessionView = 'active';
+    State.newSetRecordsInSession = {};
+    await renderSession();
+  });
+}
+
+async function renderTemplateEditor() {
+  const root = $('#screen-session');
+  const draft = State.templateEditDraft;
+  const itemsHTML = draft.items.map((it, i) => `
+    <div class="template-item" data-idx="${i}">
+      <div class="info">
+        <div class="name">${escapeHTML(it.name)}</div>
+        <div class="meta">${it.default_sets} serie</div>
+      </div>
+      <div class="actions">
+        <button class="btn-small" data-action="sets-minus" data-idx="${i}">−</button>
+        <button class="btn-small" data-action="sets-plus" data-idx="${i}">+</button>
+        <button class="btn-small danger" data-action="remove" data-idx="${i}">✕</button>
+      </div>
+    </div>
+  `).join('');
+  root.innerHTML = `
+    <div class="back-row">
+      <button class="btn-tertiary" id="btn-back">← Indietro</button>
+    </div>
+    <div class="section-title">Nuovo template</div>
+    <div class="add-exercise-row">
+      <input type="text" id="tpl-name" placeholder="Nome template" value="${escapeHTML(draft.name)}" />
+    </div>
+    <div class="section-title">Esercizi</div>
+    <div class="template-list">${itemsHTML || '<div class="empty-state">Aggiungi esercizi qui sotto</div>'}</div>
+    <div class="add-exercise-row">
+      <input type="text" id="tpl-add-ex" placeholder="Nome esercizio" autocomplete="off" />
+      <button id="tpl-add-btn">+</button>
+    </div>
+    <div id="tpl-suggestions"></div>
+    <button class="btn-primary" id="tpl-save" style="margin-top:16px">Salva template</button>
+  `;
+  $('#btn-back', root).addEventListener('click', async () => {
+    State.sessionView = 'templates';
+    await renderSession();
+  });
+  const nameInp = $('#tpl-name', root);
+  nameInp.addEventListener('input', () => draft.name = nameInp.value);
+
+  const addInp = $('#tpl-add-ex', root);
+  const sugBox = $('#tpl-suggestions', root);
+  const refreshSuggestions = async () => {
+    const q = addInp.value.trim();
+    if (!q) { sugBox.innerHTML = ''; return; }
+    const results = await Exercises.searchByName(q);
+    sugBox.innerHTML = results.length === 0 ? '' :
+      `<div class="exercise-suggestions">${
+        results.map(r => `<div class="exercise-suggestion" data-exid="${r.public_id}">${escapeHTML(r.name)}</div>`).join('')
+      }</div>`;
+    $$('.exercise-suggestion', sugBox).forEach(el => {
+      el.addEventListener('click', () => addExerciseToDraft(el.textContent));
+    });
+  };
+  addInp.addEventListener('input', refreshSuggestions);
+  const addExerciseToDraft = async (name) => {
+    if (!name.trim()) return;
+    const ex = await Exercises.findOrCreate(name);
+    if (!ex) return;
+    draft.items.push({ exercise_public_id: ex.public_id, name: ex.name, default_sets: 3 });
+    addInp.value = '';
+    sugBox.innerHTML = '';
+    await renderSession();
+  };
+  $('#tpl-add-btn', root).addEventListener('click', () => addExerciseToDraft(addInp.value));
+  addInp.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); addExerciseToDraft(addInp.value); }
+  });
+  $$('[data-action="remove"]', root).forEach(b => {
+    b.addEventListener('click', async () => {
+      draft.items.splice(Number(b.dataset.idx), 1);
+      await renderSession();
+    });
+  });
+  $$('[data-action="sets-plus"]', root).forEach(b => {
+    b.addEventListener('click', async () => {
+      draft.items[Number(b.dataset.idx)].default_sets++;
+      await renderSession();
+    });
+  });
+  $$('[data-action="sets-minus"]', root).forEach(b => {
+    b.addEventListener('click', async () => {
+      const it = draft.items[Number(b.dataset.idx)];
+      if (it.default_sets > 1) it.default_sets--;
+      await renderSession();
+    });
+  });
+  $('#tpl-save', root).addEventListener('click', async () => {
+    const name = (draft.name||'').trim();
+    if (!name) { await confirm('Inserisci un nome per il template', { confirmLabel:'OK' }); return; }
+    if (draft.items.length === 0) { await confirm('Aggiungi almeno un esercizio', { confirmLabel:'OK' }); return; }
+    await Templates.create(name, draft.items.map(it => ({
+      exercise_public_id: it.exercise_public_id,
+      default_sets: it.default_sets
+    })));
+    State.sessionView = 'templates';
+    State.templateEditDraft = null;
+    await renderSession();
+  });
+}
+
+async function renderSessionActive() {
+  const root = $('#screen-session');
+  const sessionId = State.activeSessionId;
+  const session = await Sessions.get(sessionId);
+  if (!session) { State.sessionView = 'start'; await renderSession(); return; }
+  const items = await Sessions.getItems(sessionId);
+
+  // Start timer
+  startSessionTimer(session.start_ts);
+
+  let exercisesHTML = '';
+  for (let i=0; i<items.length; i++) {
+    const it = items[i];
+    const sets = await Sessions.getSets(it.public_id);
+    exercisesHTML += await renderExerciseCard(it, sets, i, items.length);
+  }
+  if (items.length === 0) {
+    exercisesHTML = `<div class="empty-state">Aggiungi il primo esercizio qui sotto</div>`;
+  }
+
+  root.innerHTML = `
+    ${exercisesHTML}
+    <div class="add-exercise-row">
+      <input type="text" id="add-ex-inp" placeholder="Aggiungi esercizio" autocomplete="off" />
+      <button id="add-ex-btn">+</button>
+    </div>
+    <div id="add-ex-suggestions"></div>
+    <button class="btn-danger close-session-btn" id="btn-close-session">Chiudi sessione</button>
+    <button class="btn-tertiary" id="btn-save-as-tpl" style="margin-top:10px;width:100%">Salva come template</button>
+  `;
+
+  // Add exercise
+  const addInp = $('#add-ex-inp', root);
+  const sugBox = $('#add-ex-suggestions', root);
+  addInp.addEventListener('input', async () => {
+    const q = addInp.value.trim();
+    if (!q) { sugBox.innerHTML=''; return; }
+    const results = await Exercises.searchByName(q);
+    sugBox.innerHTML = results.length === 0 ? '' :
+      `<div class="exercise-suggestions">${
+        results.map(r => `<div class="exercise-suggestion" data-exid="${r.public_id}">${escapeHTML(r.name)}</div>`).join('')
+      }</div>`;
+    $$('.exercise-suggestion', sugBox).forEach(el => {
+      el.addEventListener('click', async () => {
+        await Sessions.addExerciseToSession(sessionId, el.dataset.exid);
+        addInp.value = ''; sugBox.innerHTML = '';
+        await renderSessionActive();
+      });
+    });
+  });
+  const addExercise = async () => {
+    const name = addInp.value.trim();
+    if (!name) return;
+    const ex = await Exercises.findOrCreate(name);
+    if (ex) {
+      await Sessions.addExerciseToSession(sessionId, ex.public_id);
+      addInp.value = ''; sugBox.innerHTML = '';
+      await renderSessionActive();
+    }
+  };
+  $('#add-ex-btn', root).addEventListener('click', addExercise);
+  addInp.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); addExercise(); }
+  });
+
+  // Close session
+  $('#btn-close-session', root).addEventListener('click', async () => {
+    const ok = await confirm('Chiudere la sessione?', { dangerous:false, confirmLabel:'Chiudi' });
+    if (!ok) return;
+    const result = await Sessions.close(sessionId);
+    stopSessionTimer();
+    // Build full new records list (session + set records from state)
+    const setRecs = Object.values(State.newSetRecordsInSession);
+    const allRecords = [
+      ...setRecs.map(r => ({ type:'set', name: r.name, detail: r.detail, value: r.vol })),
+      ...(result.newRecords || [])
+    ];
+    State.recapData = {
+      stats: result.stats,
+      newRecords: allRecords
+    };
+    State.activeSessionId = null;
+    State.sessionView = 'recap';
+    await renderSession();
+  });
+
+  // Save as template
+  $('#btn-save-as-tpl', root).addEventListener('click', async () => {
+    const name = await prompt('Nome template:');
+    if (!name) return;
+    await Sessions.saveAsTemplate(sessionId, name);
+    await confirm(`Template "${name}" salvato.`, { confirmLabel:'OK' });
+  });
+
+  // Bind set-level handlers (delegated later)
+  bindExerciseHandlers(root, sessionId);
+}
+
+async function renderExerciseCard(item, sets, index, totalCount) {
+  const setsHTML = sets.map((s, idx) => {
+    const typeLabel = SET_TYPE_LABELS[s.set_type] || 'NORM';
+    if (s.completed) {
+      const isRecord = State.newSetRecordsInSession[item.performed_exercise_public_id]
+                    && State.newSetRecordsInSession[item.performed_exercise_public_id].setPid === s.public_id;
+      return `
+        <div class="set-row confirmed" data-setpid="${s.public_id}">
+          <div class="set-num">${s.set_no}</div>
+          <div class="set-type-pill">${typeLabel}</div>
+          <div class="set-done-values">
+            <span>${s.weight}</span><span class="unit">kg</span>
+            <span style="margin:0 4px;color:var(--t4)">×</span>
+            <span>${s.reps}</span><span class="unit">rep</span>
+            ${isRecord ? '<span class="record-flag">PR ↑</span>' : ''}
+          </div>
+          <button class="set-edit-btn" data-action="edit-set" data-setpid="${s.public_id}">edit</button>
+        </div>`;
+    } else {
+      const active = sets.findIndex(x => !x.completed) === idx;
+      return `
+        <div class="set-row ${active?'active':''}" data-setpid="${s.public_id}">
+          <div class="set-num">${s.set_no}</div>
+          <button class="set-type-btn" data-action="cycle-type" data-setpid="${s.public_id}">${typeLabel}</button>
+          <input class="set-input" data-field="weight" data-setpid="${s.public_id}"
+                 inputmode="decimal" enterkeyhint="next"
+                 value="${s.weight != null ? s.weight : ''}" placeholder="kg" />
+          <div class="set-x">×</div>
+          <input class="set-input" data-field="reps" data-setpid="${s.public_id}"
+                 inputmode="numeric" enterkeyhint="done"
+                 value="${s.reps != null ? s.reps : ''}" placeholder="rep" />
+          <button class="set-confirm" data-action="confirm-set" data-setpid="${s.public_id}">✓</button>
+        </div>`;
+    }
+  }).join('');
+
+  const supersetBadge = item.is_superset ? '<span class="ex-badge">SS</span>' : '';
+  const confirmedCount = sets.filter(s=>s.completed).length;
+
+  return `
+    <div class="exercise-card ${item.is_superset?'superset':''}" data-siid="${item.public_id}">
+      <div class="ex-header">
+        <div class="ex-name">${escapeHTML(item.exercise_name_snapshot)}${supersetBadge}</div>
+        <div class="ex-controls">
+          <button class="ex-ctrl-btn" data-action="sets-minus" data-siid="${item.public_id}">−s</button>
+          <button class="ex-ctrl-btn" data-action="sets-plus" data-siid="${item.public_id}">+s</button>
+        </div>
+      </div>
+      <div class="ex-meta">${confirmedCount}/${sets.length} serie</div>
+      ${setsHTML}
+      <div class="ex-footer-actions">
+        <button data-action="substitute" data-siid="${item.public_id}">Sost.</button>
+        ${index > 0 ? `<button data-action="move-up" data-siid="${item.public_id}">↑</button>` : ''}
+        ${index < totalCount - 1 ? `<button data-action="move-down" data-siid="${item.public_id}">↓</button>` : ''}
+        ${index < totalCount - 1 ? `<button data-action="toggle-ss" data-siid="${item.public_id}">${item.is_superset?'× SS':'+ SS'}</button>` : ''}
+        <button data-action="delete-ex" data-siid="${item.public_id}">Elimina</button>
+      </div>
+    </div>
+  `;
+}
+
+function bindExerciseHandlers(root, sessionId) {
+  root.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-action]');
+    if (!btn) return;
+    const action = btn.dataset.action;
+    const siid = btn.dataset.siid;
+    const setpid = btn.dataset.setpid;
+
+    if (action === 'sets-plus') {
+      await Sessions.addSet(siid);
+      await renderSessionActive();
+    }
+    else if (action === 'sets-minus') {
+      await Sessions.removeLastSet(siid);
+      await renderSessionActive();
+    }
+    else if (action === 'delete-ex') {
+      const ok = await confirm('Eliminare questo esercizio e tutte le sue serie?', { dangerous:true, confirmLabel:'Elimina' });
+      if (ok) {
+        await Sessions.removeItem(siid);
+        await renderSessionActive();
+      }
+    }
+    else if (action === 'substitute') {
+      await showSubstituteModal(siid);
+      await renderSessionActive();
+    }
+    else if (action === 'move-up') {
+      await Sessions.moveItem(siid, 'up');
+      await renderSessionActive();
+    }
+    else if (action === 'move-down') {
+      await Sessions.moveItem(siid, 'down');
+      await renderSessionActive();
+    }
+    else if (action === 'toggle-ss') {
+      await Sessions.toggleSuperset(siid);
+      await renderSessionActive();
+    }
+    else if (action === 'cycle-type') {
+      const setRow = await db.sets.where('public_id').equals(setpid).first();
+      if (setRow) {
+        const newType = SET_TYPE_CYCLE[setRow.set_type] || 'normal';
+        await db.sets.update(setRow.id, { set_type: newType, updated_at: nowISO() });
+        await renderSessionActive();
+      }
+    }
+    else if (action === 'confirm-set') {
+      const row = btn.closest('.set-row');
+      const wInp = $('[data-field="weight"]', row);
+      const rInp = $('[data-field="reps"]', row);
+      const w = parseFloat(wInp.value.replace(',','.'));
+      const r = parseInt(rInp.value, 10);
+      if (isNaN(w) || w < 0 || isNaN(r) || r < 0) {
+        await confirm('Inserisci peso e ripetizioni validi', { confirmLabel:'OK' });
+        return;
+      }
+      const setRow = await db.sets.where('public_id').equals(setpid).first();
+      const typeBtn = $('[data-action="cycle-type"]', row);
+      const typeLabel = typeBtn ? typeBtn.textContent : 'NORM';
+      const setType = Object.keys(SET_TYPE_LABELS).find(k => SET_TYPE_LABELS[k] === typeLabel) || 'normal';
+      const result = await Sessions.confirmSet(setpid, w, r, setType);
+      if (result && result.isNewSetRecord) {
+        const si = await db.session_items.where('public_id').equals(setRow.session_item_public_id).first();
+        if (si) {
+          State.newSetRecordsInSession[si.performed_exercise_public_id] = {
+            name: si.exercise_name_snapshot,
+            detail: `${w} kg × ${r} rep`,
+            vol: result.volume,
+            setPid: setpid
+          };
+        }
+      }
+      await renderSessionActive();
+    }
+    else if (action === 'edit-set') {
+      await Sessions.unconfirmSet(setpid);
+      await renderSessionActive();
+    }
+  });
+
+  // Enter key navigation in inputs
+  root.addEventListener('keydown', (e) => {
+    if (e.target.matches('.set-input') && e.key === 'Enter') {
+      e.preventDefault();
+      const field = e.target.dataset.field;
+      if (field === 'weight') {
+        const row = e.target.closest('.set-row');
+        const rInp = $('[data-field="reps"]', row);
+        if (rInp) rInp.focus();
+      } else if (field === 'reps') {
+        const row = e.target.closest('.set-row');
+        const confBtn = $('[data-action="confirm-set"]', row);
+        if (confBtn) confBtn.click();
+      }
+    }
+  });
+}
+
+async function showSubstituteModal(siid) {
+  return new Promise(async (resolve) => {
+    const exercises = await Exercises.all();
+    exercises.sort((a,b) => a.name.localeCompare(b.name));
+    const listHTML = exercises.map(e =>
+      `<div class="exercise-suggestion" data-exid="${e.public_id}">${escapeHTML(e.name)}</div>`
+    ).join('');
+    const root = $('#modal-root');
+    root.innerHTML = `
+      <div class="modal-backdrop">
+        <div class="modal">
+          <h3>Sostituisci esercizio</h3>
+          <input type="text" id="sub-search" placeholder="Cerca o crea…" autocomplete="off" />
+          <div class="exercise-suggestions" id="sub-list" style="max-height:300px;margin-bottom:10px">${listHTML}</div>
+          <div class="modal-actions">
+            <button class="cancel" id="sub-cancel">Annulla</button>
+          </div>
+        </div>
+      </div>`;
+    const cleanup = () => { root.innerHTML = ''; resolve(); };
+    const search = $('#sub-search');
+    const list = $('#sub-list');
+    search.focus();
+    const applyFilter = () => {
+      const q = search.value.toLowerCase();
+      $$('.exercise-suggestion', list).forEach(el => {
+        el.style.display = el.textContent.toLowerCase().includes(q) ? '' : 'none';
+      });
+    };
+    search.addEventListener('input', applyFilter);
+    search.addEventListener('keydown', async (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const name = search.value.trim();
+        if (!name) return;
+        const ex = await Exercises.findOrCreate(name);
+        if (ex) {
+          await Sessions.substituteExercise(siid, ex.public_id);
+          cleanup();
+        }
+      }
+    });
+    list.addEventListener('click', async (e) => {
+      const el = e.target.closest('.exercise-suggestion');
+      if (!el) return;
+      await Sessions.substituteExercise(siid, el.dataset.exid);
+      cleanup();
+    });
+    $('#sub-cancel').addEventListener('click', cleanup);
+  });
+}
+
+function renderRecap() {
+  const root = $('#screen-session');
+  const data = State.recapData;
+  stopSessionTimer();
+  const prHTML = (data.newRecords||[]).map(r => `
+    <div class="recap-pr-card">
+      <div class="badge">${r.type === 'session' ? 'NUOVO PR SESSIONE' : 'NUOVO PR SERIE'}</div>
+      <div class="name">${escapeHTML(r.name)}</div>
+      <div class="det">${fmtKg(r.value)} · ${escapeHTML(r.detail)}</div>
+    </div>
+  `).join('');
+  root.innerHTML = `
+    <div class="recap-title">SESSIONE <span class="ok">OK</span></div>
+    <div class="recap-subtitle">${escapeHTML(data.stats.duration)} · ${data.stats.totalSets} serie · ${fmtKg(data.stats.totalVolume)} volume</div>
+    ${prHTML || ''}
+    <div class="recap-stats">
+      <div class="recap-stat"><div class="lbl">Durata</div><div class="val">${escapeHTML(data.stats.duration)}</div></div>
+      <div class="recap-stat"><div class="lbl">Serie</div><div class="val">${data.stats.totalSets}</div></div>
+      <div class="recap-stat"><div class="lbl">Volume</div><div class="val">${fmtKg(data.stats.totalVolume)}</div></div>
+    </div>
+    <button class="btn-primary" id="btn-recap-done" style="margin-top:16px">Fine</button>
+  `;
+  $('#btn-recap-done', root).addEventListener('click', async () => {
+    State.sessionView = 'start';
+    State.recapData = null;
+    State.newSetRecordsInSession = {};
+    await renderSession();
+  });
+}
+
+// ── Timer ──────────────────────────────────────────────────────────────────
+
+function startSessionTimer(startISO) {
+  stopSessionTimer();
+  const timerEl = $('#session-timer');
+  timerEl.hidden = false;
+  const start = new Date(startISO).getTime();
+  const tick = () => {
+    const s = Math.floor((Date.now()-start)/1000);
+    timerEl.textContent = fmtTimer(s);
+  };
+  tick();
+  State.sessionTimer = setInterval(tick, 1000);
+}
+function stopSessionTimer() {
+  if (State.sessionTimer) { clearInterval(State.sessionTimer); State.sessionTimer = null; }
+  const timerEl = $('#session-timer');
+  if (timerEl) timerEl.hidden = true;
+}
+
+// ── Records tab ────────────────────────────────────────────────────────────
+
+async function renderRecords() {
+  const root = $('#screen-records');
+  const records = await Records.all();
+  if (records.length === 0) {
+    root.innerHTML = `<div class="empty-state">Nessun record ancora.<br/>Completa una sessione per iniziare.</div>`;
+    return;
+  }
+  root.innerHTML = records.map(r => `
+    <div class="record-card">
+      <div class="name">${escapeHTML(r.exercise_name_snapshot)}</div>
+      <div class="record-stats">
+        <div class="record-stat">
+          <div class="lbl">Max Vol. Sessione</div>
+          <div class="val">${r.max_session_volume ? fmtKg(r.max_session_volume) : '—'}</div>
+          <div class="det">${escapeHTML(r.max_session_volume_detail || '')}</div>
+          <div class="date">${r.max_session_volume_date ? fmtDate(r.max_session_volume_date) : ''}</div>
+        </div>
+        <div class="record-stat">
+          <div class="lbl">Max Vol. Serie</div>
+          <div class="val">${r.max_set_volume ? fmtKg(r.max_set_volume) : '—'}</div>
+          <div class="det">${escapeHTML(r.max_set_volume_detail || '')}</div>
+          <div class="date">${r.max_set_volume_date ? fmtDate(r.max_set_volume_date) : ''}</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Info tab ───────────────────────────────────────────────────────────────
+
+async function renderInfo() {
+  const root = $('#screen-info');
+  const status = await StorageService.getStatus();
+  const lastExport = await Settings.get('last_successful_export_at');
+  const homeSeen = await Settings.get('home_screen_recommended_seen');
+  const exerciseCount = (await Exercises.all()).length;
+  const sessionsDone = (await db.sessions.filter(s=>s.status==='completed').toArray()).length;
+
+  const onboardingHTML = homeSeen ? '' : `
+    <div class="onboarding-card">
+      <h3>📱 Aggiungi a Home</h3>
+      <ol>
+        <li>Tocca il pulsante <b>Condividi</b> in Safari.</li>
+        <li>Scorri e seleziona <b>Aggiungi alla schermata Home</b>.</li>
+        <li>Apri GandoGym dall'icona sulla Home per la miglior esperienza.</li>
+      </ol>
+      <button class="dismiss" id="dismiss-onboard">Ho capito, nascondi</button>
+    </div>
+  `;
+
+  root.innerHTML = `
+    ${onboardingHTML}
+    <div class="info-section">
+      <h3>Storage</h3>
+      <div class="info-row"><span class="lbl">Persistenza</span><span class="val">${status.persisted?'✓ Attiva':'Non garantita'}</span></div>
+      <div class="info-row"><span class="lbl">Spazio usato</span><span class="val">${status.estimateMB ? status.estimateMB + ' MB' : '—'}</span></div>
+      <div class="info-row"><span class="lbl">Esercizi</span><span class="val">${exerciseCount}</span></div>
+      <div class="info-row"><span class="lbl">Sessioni completate</span><span class="val">${sessionsDone}</span></div>
+      ${!status.persisted ? `<button class="btn-secondary" id="btn-persist">Richiedi persistenza</button>` : ''}
+    </div>
+    <div class="info-section">
+      <h3>Backup</h3>
+      <div class="info-row"><span class="lbl">Ultimo export</span><span class="val">${lastExport?fmtDate(lastExport):'Mai'}</span></div>
+      <button class="btn-primary" id="btn-export">Esporta JSON</button>
+      <button class="btn-secondary" id="btn-import" style="margin-top:8px">Importa JSON</button>
+      <input type="file" id="file-input" accept=".json" hidden />
+    </div>
+    <div class="info-section">
+      <h3>Reset</h3>
+      <p style="font-size:13px;color:var(--t3);margin-bottom:10px">Elimina tutti i dati locali. Esporta prima, se ti interessano.</p>
+      <button class="btn-danger" id="btn-reset">Reset completo</button>
+    </div>
+    <div class="info-section">
+      <h3>App</h3>
+      <div class="info-row"><span class="lbl">Versione</span><span class="val">7.0</span></div>
+      <div class="info-row"><span class="lbl">Schema dati</span><span class="val">v7</span></div>
+    </div>
+  `;
+
+  const dismissBtn = $('#dismiss-onboard', root);
+  if (dismissBtn) dismissBtn.addEventListener('click', async () => {
+    await Settings.set('home_screen_recommended_seen', true);
+    await renderInfo();
+  });
+
+  const persistBtn = $('#btn-persist', root);
+  if (persistBtn) persistBtn.addEventListener('click', async () => {
+    await StorageService.requestPersist();
+    await renderInfo();
+  });
+
+  $('#btn-export', root).addEventListener('click', async () => {
+    await ImportExport.downloadExport();
+    await renderInfo();
+  });
+
+  const fileInput = $('#file-input', root);
+  $('#btn-import', root).addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const mode = await showModal({
+      title: 'Modalità import',
+      bodyHTML: '<p>Come vuoi importare il backup?</p>',
+      actions: [
+        { label:'Annulla', kind:'cancel', value:null },
+        { label:'Merge', kind:'cancel', value:'merge' },
+        { label:'Sostituisci tutto', kind:'danger', value:'restore' },
+      ]
+    });
+    if (!mode) return;
+    try {
+      await ImportExport.importFromFile(file, mode);
+      await confirm('Import completato.', { confirmLabel:'OK' });
+      await renderInfo();
+    } catch (err) {
+      await confirm('Errore import: ' + err.message, { confirmLabel:'OK' });
+    }
+    fileInput.value = '';
+  });
+
+  $('#btn-reset', root).addEventListener('click', async () => {
+    const ok = await confirm('Eliminare TUTTI i dati? Questa azione è irreversibile.', { dangerous:true, confirmLabel:'Reset' });
+    if (!ok) return;
+    const ok2 = await confirm('Confermi? Hai esportato i dati che ti interessano?', { dangerous:true, confirmLabel:'Sì, reset' });
+    if (!ok2) return;
+    await ImportExport.resetAll();
+    await confirm('Reset completato.', { confirmLabel:'OK' });
+    State.activeSessionId = null;
+    State.sessionView = 'start';
+    await renderInfo();
+  });
+}
+
+// ── Boot ───────────────────────────────────────────────────────────────────
+
+async function boot() {
+  try {
+    await db.open();
+    await Settings.initDefaults();
+    if (!(await Settings.get('storage_persist_requested'))) {
+      await StorageService.requestPersist();
+    }
+    // Tab bar
+    $$('.tab-btn').forEach(b => b.addEventListener('click', () => navigate(b.dataset.tab)));
+    await navigate('session');
+  } catch (err) {
+    console.error(err);
+    $('#app').innerHTML = `
+      <div style="padding:32px;color:#fff;text-align:center">
+        <div style="font-size:18px;margin-bottom:8px">Errore avvio</div>
+        <div style="color:#888;font-size:14px">${escapeHTML(err.message)}</div>
+        <button onclick="location.reload()" style="margin-top:16px;padding:12px 24px;background:#CC1500;color:#fff;border:none;border-radius:8px;font-size:16px">Riprova</button>
+      </div>`;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', boot);
+
+</script>
+</body>
+</html>
